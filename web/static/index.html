@@ -1,0 +1,915 @@
+<!DOCTYPE HTML> 
+<html> 
+    <head> 
+        <title>Nanostore</title> 
+          
+        <script> 
+            
+            /*
+            var HttpClient = function() {
+              this.get = function(aUrl, aCallback) {
+                  var anHttpRequest = new XMLHttpRequest();
+                  anHttpRequest.onreadystatechange = function() { 
+                      if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
+                          aCallback(anHttpRequest.responseText);
+                  }
+
+                  anHttpRequest.open( "GET", aUrl, true );            
+                  anHttpRequest.send( null );
+              }
+            }
+            */
+
+            function range_equal(range1, range2){
+              return (range1.start == range2.start) && (range1.end == range2.end);
+            }
+            
+            function load_data(){
+              console.log(" LOADINg DATA ");
+              
+              for (i=0; i<plot_context.tracks.length; i++){
+                for (j=0; j<plot_context.tracks[i].channels.length; j++){
+                  var channel_id = plot_context.tracks[i].channels[j].channel_id;
+                  var need_to_load = true;
+                  /*
+                  if (channel_id in plot_context.data.loaded){
+                    if ((plot_context.data.loaded[channel_id].last_loaded.start != plot_context.interval.start ) &&
+                       (plot_context.data.loaded[channel_id].last_loaded.end > plot_context.interval.end ) ) {
+                      need_to_load = true;
+                    }
+                  }
+                  */
+                  
+                  
+                  if (need_to_load){
+                    
+                    var number_of_points = plot_context.last_width;
+                    fetch("get_data_for_plot/"+channel_id+'/'+plot_context.interval.start+'/'+plot_context.interval.end +'/'+ number_of_points).then(function(response) {
+                      console.log("data response : ");
+                      return response.json();
+                    }).then(function(data) {
+                      console.log("got data : " + data);
+                      
+                      plot_context.data.loaded[channel_id] = data;
+                      plot_context.dirty = true;
+                      /*
+                      for (i=0; i<data.channels.length, i++){
+                        plot_context.data.range[] data.channels[i]
+                      }
+                      */
+                      
+                      /*
+                      plot_context.known_max_range = data.total;
+                      if (plot_context.autorange){
+                        
+                        var changed = !range_equal(plot_context.interval, plot_context.known_max_range);
+                        plot_context.interval = plot_context.known_max_range;
+                        if (changed){
+                          plot_context.dirty = true;
+                        }
+                        
+                      }
+                      */
+                      
+                    }).catch(function(e) {
+                      console.log("Booo" + e);
+                    });
+
+                  }
+                  
+                  //console.log(' NEED To LOAD:' + channel_id+ ' -? : ' + need_to_load);
+
+                }
+              }
+
+      
+              /*
+              for (i=0; i<plot_context.data.loaded.length; i++){
+                if (loaded_)
+              }
+              */
+              
+            }
+
+            function refresh_range(){
+              
+              var channels = []
+              for (i = 0; i < plot_context.tracks.length; i++){
+                  for (j = 0; j < plot_context.tracks[i].channels.length; j++){
+                    var ch_name = plot_context.tracks[i].channels[j].channel_id;
+                    channels.push(ch_name)
+                  }
+                }
+
+                //console.log('asking for '  + channels);
+                
+                fetch("get_multi_range?channels="+channels).then(function(response) {
+                      console.log("range response : " + response);
+                      return response.json();
+                    }).then(function(data) {
+                      console.log("range data : " + data);
+                      /*
+                      for (i=0; i<data.channels.length, i++){
+                        plot_context.data.range[] data.channels[i]
+                      }
+                      */
+                      plot_context.known_max_range = data.total;
+                      if (plot_context.autorange){
+                        
+                        var changed = !range_equal(plot_context.interval, plot_context.known_max_range);
+                        plot_context.interval = plot_context.known_max_range;
+                        if (changed){
+                          plot_context.dirty = true;
+                        }
+                        
+                      }
+                    }).catch(function(e) {
+                      console.log("Booo" + e);
+                    });
+
+
+
+              /*  
+              var min_start_v = null;
+                var max_end_v = null;
+                for (i = 0; i < plot_context.tracks.length; i++){
+                  for (j = 0; j < plot_context.tracks[i].channels.length; j++){
+                    var ch_name = plot_context.tracks[i].channels[j].channel_id;
+                    
+                    fetch("get_range/"+ch_name).then(function(response) {
+                      console.log("range response : " + response);
+                      return response.json();
+                    }).then(function(data) {
+                      console.log(data);
+                      plot_context.data.range[ch_name] = response;
+                      
+                      if (min_start_v === null){
+                        //todo check for null in response
+                        min_start_v = response.start;
+                      }else{
+                        if (response.start < min_start_v) {
+                          min_start_v = response.start;
+                        }
+                      }
+
+                      if (max_start_v === null){
+                        //todo check for null in response
+                        max_end_v = response.end;
+                      }else{
+                        if (response.start < max_end_v) {
+                          max_end_v = response.end;
+                        }
+                      }
+
+                    }).catch(function(e) {
+                      console.log("Booo" + e);
+                    });
+
+                    //plot_context.data.range[channel_id].min 
+                  }
+                }
+                */
+            }
+
+            function get_selected_datasets(){
+              var result = [];
+              var datasets = document.getElementById('datasets');
+              var options = datasets.options;
+              for (var i=0; i<options.length; i++){
+                if (options[i].selected){
+                  //console.log(options[i].text);
+                  result.push(options[i].text);
+                }
+              }
+              
+              console.log("collected");
+              console.log(result);
+              return result;
+            }
+
+            function datasets_changed(){
+              
+              console.log("changed");
+              //get_selected_datasets();
+              reload_channels();
+
+            }
+            
+            function reload_channels(){
+              var channels = document.getElementById('channels');
+
+              var datasets_str = ""+get_selected_datasets();
+              fetch("get_channels?datasets="+datasets_str).then(function(response) {
+                return response.json();
+              }).then(function(data) {
+
+                console.log(data);
+                channels.innerText = null;
+
+                for( i=0; i< data.length; i++){
+                  var option = document.createElement("div");
+                  option.innerHTML = data[i];
+                  channels.appendChild(option);
+                  option.addEventListener("dragstart", dragStart);
+                  option.addEventListener("dragend", dragEnd);
+                  option.draggable = true;
+                }
+
+                /*
+                var datasets = document.getElementById('datasets');
+                datasets.innerText = null;
+
+                for( i=0; i< data.length; i++){
+                  var option = document.createElement("option");
+                  option.text = data[i];
+                  datasets.add(option, datasets[0]);
+
+                }
+                */
+
+              }).catch(function(e) {
+                console.log("Booo" + e);
+              });
+
+
+            }
+
+            function reload_datasets(){
+              //const myNode = document.getElementById("foo");
+              //myNode.innerHTML = '';
+              console.log("loading datasets");
+              fetch("get_datasets").then(function(response) {
+                return response.json();
+              }).then(function(data) {
+
+                console.log(data);
+
+                var datasets = document.getElementById('datasets');
+                datasets.innerText = null;
+
+                for( i=0; i< data.length; i++){
+                  var option = document.createElement("option");
+                  option.text = data[i];
+                  datasets.add(option, datasets[0]);
+
+                }
+
+              }).catch(function() {
+                console.log("Booo");
+              });
+
+              
+            }
+
+            var TOOL_DRAG = "DRAG";
+
+            var plot_context = {
+              last_width:0,
+              last_height:0,
+              is_channel_drag: false,
+              channel_drag_x : 0,
+              channel_drag_y : 0,
+              
+              tracks: [
+                {
+                  description: "track1",
+                  channels: [
+                  
+
+                    /*
+                    {
+                      channel_id: "dataset1/torque",
+                      stroke_style: 'rgb(200, 200, 0, 1.0)',
+                      left_scale: "auto",
+                      right_scale: "auto",
+                    }
+                    */
+                    
+                  ]
+                },
+                
+                {
+                  description: "track2",
+                  channels: [
+                  /*
+                  {
+                      channel_id: "dataset1/gamma",
+                      stroke_style: 'rgb(0, 220, 0, 1.0)',
+                      left_scale: "auto",
+                      right_scale: "auto",
+                    },
+                    */
+
+                  ]
+                },
+                {
+                  description: "track3",
+                  channels: []
+                }
+                
+              ],
+              index_gap : 75.0,
+              track_gap : 5.0,
+              track_header_box_width:30,
+              channel_header_box_width:20,
+              last_bucket : 0,
+              //interval_start: 0,
+              //interval_end: 3600,
+              dirty:true,
+              tool:TOOL_DRAG,
+              
+              mouse_drag: false,
+              mouse_pressed_at:{
+                x:0,
+                y:0
+              },
+              start_x_when_dragged: 0,
+              width_when_dragged: 0,
+
+              interval:{
+                start:300,
+                end:600,
+              },
+              autorange: true,
+              known_max_range: {
+                start:0, 
+                end:3600, 
+              },
+              
+              //
+              data: {
+                range:{
+                  fake_x:{
+                    start: 0,
+                    end: 1
+                  }
+                },
+                loaded:{
+                  "dataset1/gamma":{
+                    last_loaded: {
+                      start: 0,
+                      end: 0,
+                    },
+                    buffer:{
+                      index:[300.0, 450.0, 600.0],
+                      values:[0.0, 7.0, -5.0]
+                    }
+                  }
+                },
+              }
+              //
+
+            };
+
+
+            function getRandomColor() {
+                var letters = '0123456789ABCDEF';
+                var color = '#';
+                for (var i = 0; i < 6; i++) {
+                  color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+              }
+            
+              /*
+            function reload_range(){
+                
+            }
+            */
+
+            //function autoscale(){
+            //  reload_range();
+            //}
+
+            function redraw_canvas(){
+              if (plot_context.dirty){
+                console.log("was dirty");
+                updateCanvas();
+                plot_context.dirty = false;
+              }
+            }
+
+            function updateCanvas() { 
+              console.log("update");
+              var canvas = document.getElementById('plot');
+              var container = document.getElementById('div_right');
+
+              var ctx = canvas.getContext('2d');
+              
+
+              if ( (canvas.width != plot_context.last_width) ||
+                   (canvas.height != plot_context.last_height) ) {
+                    console.log("resize");
+                      plot_context.last_width  = canvas.width;
+                      plot_context.last_height = canvas.height;
+
+                      ctx.canvas.width  = canvas.clientWidth;
+                      ctx.canvas.height = canvas.clientHeight;
+
+                   }
+              
+                   
+              
+
+              ctx.fillStyle = 'rgba(169, 180, 190, 1.0)';
+              ctx.fillRect(0,0,canvas.clientWidth,canvas.clientHeight);
+              
+              //ctx.canvas.width  = container.clientWidth;
+              //ctx.canvas.height = container.clientHeight;
+
+              /*
+              ctx.beginPath();
+              ctx.moveTo(10,10);
+              ctx.lineTo(x,y);
+              ctx.stroke();
+              */
+              
+              
+              var available_area = ctx.canvas.height - plot_context.index_gap;
+              var track_height = (available_area / plot_context.tracks.length) - plot_context.track_gap;
+              var track_step = (available_area / plot_context.tracks.length); 
+              for (i = 0; i < plot_context.tracks.length; i++){
+                track_y0 = i * track_step + (plot_context.track_gap/2); //+ (plot_context.track_gap);
+
+
+                
+                //ctx.beginPath();
+                //plot_context.track_header_box_width
+                //ctx.fill();
+                //ctx.fillStyle = getRandomColor();
+                var track_i = plot_context.tracks[i];
+
+
+                ctx.fillStyle = 'rgba(69, 80, 90, 1.0)';
+                ctx.fillRect(0,track_y0,ctx.canvas.width,track_height);
+
+
+                ctx.beginPath();
+                ctx.rect(0, track_y0, ctx.canvas.width, track_height);
+                ctx.stroke();
+                ctx.save();
+                ctx.clip();
+
+                //ctx.beginPath();
+                //ctx.rect(0, track_y0, ctx.canvas.width, track_height);
+                //ctx.clip();
+                
+                for (j = 0; j < track_i.channels.length; j++){
+                  var channel_j = track_i.channels[j];
+                  var delta_time = plot_context.interval.end - plot_context.interval.start;  
+                  //var vertical_scale = 2;
+
+                  var left = -2.0;
+                  var right = 2.0;
+                  var vertical_scale = right - left;
+
+                    ctx.save();
+                      ctx.strokeStyle = channel_j.stroke_style;
+                      ctx.translate(0, track_y0+track_height);
+
+                      
+                      var scale_x = ctx.canvas.width / delta_time;
+                    
+                      
+
+                      var scale_y = (track_height / vertical_scale) * (-1.0);
+
+                      //ctx.lineWidth = 2 / Math.max(scale_x, scale_y);
+                      //ctx.scale( scale_x, scale_y);
+                    
+                    
+                    console.log(plot_context.interval);
+                    console.log("delta_time:" + delta_time);
+
+                    if (channel_j.channel_id in plot_context.data.loaded){
+                      console.log("plotting channel scale" + scale_x, scale_y);
+                      
+                      ctx.beginPath();
+                      for (k=0; k<plot_context.data.loaded[channel_j.channel_id].buffer.index.length; k++){
+                        var px = (plot_context.data.loaded[channel_j.channel_id].buffer.index[k] - plot_context.interval.start) * scale_x ;
+                        var py = (plot_context.data.loaded[channel_j.channel_id].buffer.values[k] - left) * scale_y;
+                        if (k==0){
+                          ctx.moveTo(px,py);
+                        }else{
+                          ctx.lineTo(px,py);
+                        }
+                        //console.log("k=", k, px, py);
+                      }
+                      ctx.stroke();
+
+                    }
+
+                    ctx.restore();
+
+                }
+                
+
+              //ctx.beginPath();
+              //ctx.rect(0,0, ctx.canvas.width, ctx.canvas.height);
+              //ctx.clip();
+              ctx.restore();
+
+
+                
+
+                ctx.fillStyle = "rgb(100,105,110)";
+                ctx.fillRect(0,track_y0,plot_context.track_header_box_width + (plot_context.channel_header_box_width * track_i.channels.length),track_height);
+
+
+                // plotting tracks header
+                ctx.fillStyle = "rgb(0,0,0)";
+                ctx.save();
+                ctx.translate(0, track_y0 + track_height);
+                ctx.rotate(-Math.PI/2);
+                ctx.font = "14px Arial";
+                text_measurement = ctx.measureText(track_i.description);
+                //console.log(text_measurement);
+                ctx.fillText(track_i.description, (track_height/2)-(text_measurement.width/2), 14);
+                ctx.restore();
+
+
+                // plotting curve header on the track
+                for (j = 0; j < track_i.channels.length; j++){
+                  var channel_j = track_i.channels[j];
+
+                  ctx.fillStyle = channel_j.stroke_style;
+                  ctx.save();
+                  ctx.translate(plot_context.track_header_box_width + (j * plot_context.channel_header_box_width), track_y0 + track_height);
+                  ctx.rotate(-Math.PI/2);
+                  ctx.font = "10px Arial";
+                  text_measurement = ctx.measureText(channel_j.channel_id);
+                  //console.log(text_measurement);
+                  ctx.fillText(channel_j.channel_id, (track_height/2)-(text_measurement.width/2), 10);
+                
+                  ctx.restore();
+
+                }
+
+              }
+
+              ctx.fillStyle = 'rgba(0, 0, 160, 0.5)';
+              
+              if (plot_context.is_channel_drag){
+                var y_percent = plot_context.channel_drag_y / available_area;
+                //
+                //ctx.fillStyle = 'rgba(69, 80, 90, 1.0)';
+                //ctx.fillRect(0,0,canvas.clientWidth,canvas.clientHeight);
+                var buckets = (plot_context.tracks.length*2) + 1;
+                var which_bucket = Math.round(y_percent * buckets);
+                if (which_bucket >= buckets){
+                  which_bucket = buckets-1;
+                }
+                plot_context.last_bucket = which_bucket;
+                ctx.fillRect(0, which_bucket * (available_area / (buckets)), canvas.clientWidth, available_area / buckets);
+              }
+
+
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+
+              //ctx.translate(0, ctx.canvas.height);
+              ctx.font = "10px Arial";
+              var start_index_str = "" + plot_context.interval.start;
+              var end_index_str = "" + plot_context.interval.end;
+              
+              ctx.fillText(start_index_str, 0, ctx.canvas.height - 50);
+
+              text_measurement = ctx.measureText(end_index_str);
+              ctx.fillText(end_index_str, ctx.canvas.width - text_measurement.width, ctx.canvas.height - 50);
+
+              //console.log("start_index_str +" + start_index_str);
+
+            }
+
+            function allowDrop(ev) { 
+                //return true;
+                console.log("xxxx z "+ ev.clientX + " " + ev.clientY );
+                ev.preventDefault(); 
+                var rect = ev.target.getBoundingClientRect();
+                
+                plot_context.channel_drag_x = (ev.clientX - rect.left);
+                plot_context.channel_drag_y = (ev.clientY- rect.top);
+                plot_context.is_channel_drag = true;
+
+                
+                updateCanvas(
+               //   (ev.clientX - rect.left),
+               //   (ev.clientY- rect.top)
+                );
+            } 
+              
+            function dragStart(ev) { 
+              console.log("drag start");
+                ev.dataTransfer.setData("channel", ev.target.innerHTML);
+
+            }
+            
+            function dragEnd(ev) { 
+              plot_context.is_channel_drag = false;
+                //ev.dataTransfer.setData("text", ev.target.id); 
+                console.log("drag end");
+                updateCanvas();
+            }
+              
+            function dragLeave(ev) {
+              console.log("leave....");
+            }
+
+            function dragDrop(ev) { 
+              console.log("drop....");
+                ev.preventDefault(); 
+                var data = ev.dataTransfer.getData("text"); 
+                var target = document.getElementById(data);
+                var rect = ev.target.getBoundingClientRect();
+                ///console.log("target: "  + rect.left );
+                console.log("xx: "  + (ev.clientX - rect.left) );
+                plot_context.is_channel_drag = false;
+                //ev.target.appendChild(target); 
+            } 
+
+            function channelDrop(ev){
+              console.log("drop");
+              var data = ev.dataTransfer.getData("channel"); 
+              console.log(data);
+
+              
+              console.log("????" + plot_context.last_bucket);
+
+              var is_new = false;
+              if ((plot_context.last_bucket % 2) == 0) {
+                is_new = true;
+              }
+              console.log("is new " +  is_new);
+
+              
+              console.log("????" + plot_context.last_bucket);
+              var index = Math.trunc((plot_context.last_bucket - 1) / 2);
+              console.log("track: " + index);
+              //ev.dataTransfer.setData("which_bucket", which_bucket);
+              
+              if (is_new){
+                var index = Math.trunc((plot_context.last_bucket) / 2);
+                plot_context.tracks.splice(index, 0,                 
+                  {
+                    description: "new_track",
+                        channels: [
+                        {
+                          channel_id: data,
+                          stroke_style: getRandomColor(),
+                          left_scale: "auto",
+                          right_scale: "auto",
+                        }
+                    ]
+                  }
+                ); 
+              }else{
+                
+                var found_element = false;
+                for (j = 0; j < plot_context.tracks[index].channels.length; j++){
+                  if (plot_context.tracks[index].channels[j].channel_id == data){
+                    // already have element
+                    found_element = true;
+
+                  }
+                };
+                if (!found_element){
+                    plot_context.tracks[index].channels.push(
+                            {
+                              channel_id: data,
+                              stroke_style: getRandomColor(),
+                              left_scale: "auto",
+                              right_scale: "auto",
+                            }
+                    );
+                  };
+              };
+
+              //autoscale();
+              
+            }
+
+            function getMousePos(e){
+              
+              var element = document.getElementById('plot');
+
+              var rect = element.getBoundingClientRect();
+                ///console.log("target: "  + rect.left );
+              //console.log("xx: "  + (ev.clientX - rect.left) );
+                
+
+              return {
+                x: (e.clientX - rect.left),
+                y: (e.clientY - rect.top),
+              }
+            }
+
+            function convertXtoIndex(x){
+              var element = document.getElementById('plot');
+              var rect = element.getBoundingClientRect();
+              return (x / rect.width) * (plot_context.interval.end - plot_context.interval.start) + plot_context.interval.start; 
+            }
+
+            // interaction
+            function canvasMouseDown(e){
+              //console.log("down : " + e);
+              //var z = getMousePos(e);
+              plot_context.mouse_pressed_at = getMousePos(e);
+              plot_context.mouse_drag = true;
+
+              plot_context.start_x_when_dragged = plot_context.interval.start;
+              plot_context.width_when_dragged = plot_context.interval.end - plot_context.interval.start;
+
+              //console.log("down : " + z);
+            }
+            
+            function canvasMouseUp(e){
+
+              plot_context.mouse_drag = false;
+            }
+
+            function canvasMouseMove(e){
+              //var rect = element.getBoundingClientRect();
+              //var time_at_press = plot_context.mouse_pressed_at.x / 
+              if (plot_context.mouse_drag){
+                 var pressed_index = convertXtoIndex(plot_context.mouse_pressed_at.x);
+                 var now_over_index = convertXtoIndex(getMousePos(e).x);
+                 console.log("over : " + now_over_index);
+                 //var delta = pressed_index - now_over_index;
+
+                 //var delta_x = plot_context.mouse_pressed_at.x - getMousePos(e).x;
+                 var delta_x = pressed_index - now_over_index;
+
+                 plot_context.interval.start = (plot_context.start_x_when_dragged + delta_x)
+                 plot_context.interval.end = plot_context.interval.start + plot_context.width_when_dragged;
+
+                 //plot_context.interval.end += delta_x * ();
+                 //plot_context.interval.start += delta_x * ;
+                 plot_context.dirty = true;
+                 updateCanvas();
+                 plot_context.autorange = false;
+              }
+            }
+
+            function canvasMouseWheel(e){
+              console.log(e.wheelDeltaY);
+              var now_delta = plot_context.interval.end - plot_context.interval.start;
+              var p = (e.wheelDeltaY / 10000.0);
+              console.log("p="+p)
+              var new_delta = now_delta - (now_delta * p);
+              var center = (plot_context.interval.end + plot_context.interval.start) / 2;
+              plot_context.interval.start = center - (new_delta/2);
+              plot_context.interval.end = center + (new_delta/2);
+              plot_context.autorange = false;
+              //plot_context.interval.start = plot_context.interval.start - new_delta;
+              //plot_context.interval.end = plot_context.interval.end + new_delta;
+              plot_context.dirty = true;
+              updateCanvas();
+            }
+
+
+
+
+        </script> 
+          
+        <style> 
+
+.split {
+  height: 100%;
+  
+  /*width: 50%;*/
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  overflow-x: hidden;
+  padding-top: 20px;
+}
+
+/* Control the left side */
+.left {
+  left: 0;
+  width: 20%;
+  background-color: #A0A0A0;
+}
+
+/* Control the right side */
+.right {
+  right: 0;
+  width: 80%;
+  background-color: #BFBFBF;
+}
+
+          /*
+            #box { 
+                margin: auto; 
+                width: 50%; 
+                height:200px; 
+                border: 3px solid green; 
+                padding: 10px; 
+            } 
+            */
+            
+            /*
+            #box1, #box2, #box3 { 
+                float: left; 
+                margin: 5px; 
+                padding: 10px; 
+            } 
+            */
+
+            /*
+            
+            #box3 { 
+                width: 150px; 
+                height: 150px; 
+                background-color: #BEA7CC; 
+            } 
+            */
+            
+            /*
+            p { 
+                font-size:20px; 
+                font-weight:bold; 
+                text-align:center; 
+            } 
+
+
+            .gfg { 
+                font-size:40px; 
+                color:#009900; 
+                font-weight:bold; 
+                text-align:center; 
+            } 
+            */
+        </style> 
+    </head> 
+      
+    <body> 
+
+        <div class="split left"> 
+          
+          <div>
+            
+            Dataset <input type="text" value="*">
+            
+            <select name="datasets" id="datasets" size="5" style="width: 100%;" onchange="datasets_changed()" multiple>
+              <option value="volvo">Volvo</option>
+              <option value="saab">Saab</option>
+              <option value="mercedes">Mercedes</option>
+              <option value="audi">Audi</option>
+              <option value="audi1">Audi2</option>
+              <option value="audi2">Audi3</option>
+              <option value="audi3">Audi4</option>
+              <option value="audi4">Audi5</option>
+              <option value="audi5">Audi6</option>
+            </select>
+
+          <div>
+                channel filter <input type="text" value="*">
+
+                  <div id="channels" style="overflow: scroll; height: 100%;">
+                    <div id="box1" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 1</div> 
+                    <div id="box2" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 2</div> 
+                    <div id="box3" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 4</div> 
+                    <div id="box4" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 5</div> 
+                    <div id="box5" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 6</div> 
+                    <div id="box6" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 7</div> 
+                    <div id="box7" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 8</div> 
+                    <div id="box8" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 9</div> 
+
+                    <div id="box11" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 1</div> 
+                    <div id="box12" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 2</div> 
+                    <div id="box13" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 4</div> 
+                    <div id="box14" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 5</div> 
+                    <div id="box15" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 6</div> 
+                    <div id="box16" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 7</div> 
+                    <div id="box17" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 8</div> 
+                    <div id="box18" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">channel 9</div> 
+
+                  </div>
+          </div> 
+
+          <canvas id="plot" class="split right" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="channelDrop(event)" onmousedown="canvasMouseDown(event)" onmouseup="canvasMouseUp(event)" onmousemove="canvasMouseMove(event)" onmousewheel="canvasMouseWheel(event)" ></canvas>
+          
+          <!--
+        <div class="split right"> 
+          
+          <canvas id="plot" width="100%" height="100%" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="channelDrop(event)"></canvas>
+          
+          <script> 
+            updateCanvas();
+          </script> 
+
+        </div>
+        -->
+
+        <script> 
+          //reload_datasets();
+          reload_datasets();
+          updateCanvas();
+          var load_data_timer = setInterval(load_data, 1000);
+          var load_range_timer = setInterval(refresh_range, 1000);
+          var redraw = setInterval(redraw_canvas, 1000);
+        </script> 
+
+
+    </body> 
+</html>
